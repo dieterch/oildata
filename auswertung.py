@@ -1,16 +1,32 @@
-from email import header
-from unittest import result
 import pandas as pd
 from pprint import pprint as pp
 import helpers
 import logging
 import os
+import time
 import config
 import datetime
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl import load_workbook
+from itertools import islice
 
 def summary(filename):
+    t0 = time.time()
     fields = ['Unique Code','General Description','Oil/Fluid Long Name','Unit Hours','Oil/Fluid Hours'] # auf die benötigten Felder beschränken
-    xdf = pd.read_excel(filename)[fields]
+
+    # load data into dataframe with openpyxl
+    wb = load_workbook(filename)
+    wbsheets = wb.sheetnames
+    ws0 = wb[wbsheets[0]]
+    data = ws0.values
+    cols = next(data)[1:]
+    data = list(data)
+    idx = [r[0] for r in data]
+    data = (islice(r, 1, None) for r in data)
+    xdf = pd.DataFrame(data, index=idx, columns=cols)[fields]
+
+    #xdf = pd.read_excel(filename)[fields]
+
     corr_xdf = xdf.applymap(helpers.corr) # correct the contents
     
     result = {
@@ -43,14 +59,29 @@ def summary(filename):
                 pass # do nothing on entry rows with missing parameters.
         result['gültige Motoren'].append(count_sum)
         result['Kumulierte Öl Stunden'].append(int(f"{oil_sum:0.0f}"))
-        result['Mittlere Öl Stunden pro gültigem Motor'].append(int(f"{oil_sum / count_sum:0.0f}"))
+        result['Mittlere Öl Stunden pro gültigem Motor'].append(int(f"{oil_sum / (count_sum or 1):0.0f}"))
     result[' '] = ['']*len(columns)
     result['Datum'] = [pd.Timestamp.now()] + ['']* (len(columns)-1)
     result['Datei'] = [os.path.basename(filename)]  + ['']* (len(columns)-1)
     rdf = pd.DataFrame.from_dict(result, columns=columns, orient='index')
     logging.info(f"Exporting Zusammenfassung to {config.zoutfile}.")
-    rdf.to_excel(config.zoutfile)
+    #rdf.to_excel(config.zoutfile)
     print(rdf)
+    print('save to excel sheet')
+    t1 = time.time()
+
+    # add summary sheets
+    wb = load_workbook(filename)
+    wb.create_sheet('Zusammenfassung')
+    wbsheets = wb.sheetnames
+    ws = wb[wbsheets[-1]]
+    for r in dataframe_to_rows(rdf, index=True, header=True):
+        ws.append(r)
+    wb.save(filename)
+    wb.close()
+
+    t2 = time.time()
+    print(f"fertig, Dauer Einlesen ...{(t1-t0):0.2f} Dauer Speichern ...{(t2-t1):0.2f} Dauer gesamt ...{(t2-t0):0.2f}")
     #os.startfile(config.zoutfile)
 
 def summary2(filename, oil_name):
@@ -85,7 +116,7 @@ def summary2(filename, oil_name):
     result.update({
         'gültige Motoren': count_sum,
         'Kumulierte Öl Stunden': int(f"{oil_sum:0.0f}"),
-        'Mittlere Öl Stunden pro gültigem Motor': int(f"{oil_sum / count_sum:0.0f}")
+        'Mittlere Öl Stunden pro gültigem Motor': int(f"{oil_sum / (count_sum or 1):0.0f}")
     })
     rdf = pd.DataFrame.from_dict(result, orient='index')
     logging.info(f"Exporting Zusammenfassung to {config.zoutfile}.")
