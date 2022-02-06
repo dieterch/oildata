@@ -24,8 +24,11 @@ def load(filename):
     checkedfile = helpers.checkfile(filename)
     logging.info(f"Pre Check File {filename} completed.")
     
+    # analyze encoding and delimiter
+    analysis = helpers.analyze_file(checkedfile)
+
     # Spectro Daten in ein pandas DataFrame einlesen: 
-    sdf = pd.read_csv(checkedfile, sep=',', encoding='utf-8', index_col=False)
+    sdf = pd.read_csv(checkedfile, sep=analysis['delimiter'], encoding=analysis['encoding'], index_col=False)
     logging.info(f"CSV {filename} loaded.")
 
     # Quick check: is key 'Unique Code' in the CSV ?

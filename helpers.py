@@ -3,6 +3,9 @@ import os
 import re
 import config
 import logging
+from chardet.universaldetector import UniversalDetector
+import csv
+
 
 # regular Expressions for the corr function.
 date_pattern = "^((\d{2}[-,/,\.]){2}\d{2,4}\s(\d{2}:){1,2}\d{2})(.*)" #matches all date constructs in spectro csv
@@ -43,7 +46,9 @@ def checkfile(filename):
     if os.path.exists(config.tempfile):
         os.remove(config.tempfile)
 
-    with open(filename, "r", encoding='cp1250') as in_file, open(config.tempfile, 'w', encoding='utf-8') as out_file:
+    ae = analyze_file(filename)
+
+    with open(filename, "r", encoding=ae['encoding']) as in_file, open(config.tempfile, 'w', encoding='utf-8') as out_file:
         lines = (l for l in in_file)
         try:
             for line in lines:
@@ -53,3 +58,19 @@ def checkfile(filename):
             logging.error(f"Checkfile Error: {str(err)}")
             raise
     return config.tempfile
+
+def analyze_file(filename):
+
+    detector = UniversalDetector()
+    with open(filename, 'rb') as check_file:
+        lines = (l for l in check_file)
+        for line in lines:
+            detector.feed(line)
+            if detector.done: break
+    detector.close()
+    det_encoding = detector.result['encoding']
+
+    with open(filename, 'r', newline="", encoding=det_encoding) as csvfile:
+        dialect = csv.Sniffer().sniff(csvfile.read(1024), delimiters=";,")
+
+    return {'encoding': det_encoding, 'delimiter': dialect.delimiter} 
