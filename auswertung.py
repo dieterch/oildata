@@ -8,7 +8,52 @@ import os
 import config
 import datetime
 
-def summary(filename, oil_name):
+def summary(filename):
+    fields = ['Unique Code','General Description','Oil/Fluid Long Name','Unit Hours','Oil/Fluid Hours'] # auf die benötigten Felder beschränken
+    xdf = pd.read_excel(filename)[fields]
+    corr_xdf = xdf.applymap(helpers.corr) # correct the contents
+    
+    result = {
+    'Zeilen': [],
+    'Eindeutige Motoren': [],
+    'gültige Motoren': [],
+    'Kumulierte Öl Stunden': [],
+    'Mittlere Öl Stunden pro gültigem Motor': [],
+    }
+    # alle Öle im file ermitteln
+    columns = list(corr_xdf['Oil/Fluid Long Name'].unique())
+    for oil_name in columns:
+        new_xdf = corr_xdf[corr_xdf['Oil/Fluid Long Name'] == oil_name] # nur die Zeilen mit 'oil_name' ausfiltern
+        uniquecodes = new_xdf['Unique Code'].unique() # Alle Unique Codes der Motoren auslesen - nur unterschiedliche codes kommen in die Liste
+        No_of_Engines = len(uniquecodes)
+        result['Zeilen'].append(new_xdf.shape[0])
+        result['Eindeutige Motoren'].append(No_of_Engines)
+        if new_xdf.shape[0] == 0: #no enties found
+            raise ValueError(f"kein Öl mit Namen '{oil_name}' in '{os.path.basename(filename)}' gefunden.")
+        oil_sum = 0
+        count_sum = 0
+        for u in uniquecodes:
+            df = new_xdf[new_xdf['Unique Code'] == u].sort_values(by = ['Unit Hours'],ascending=[True])
+            try: #try to calculate oil running hours
+                oil_age = df['Unit Hours'].max() - df['Unit Hours'].min() + df.iloc[0]['Oil/Fluid Hours']
+                if oil_age == oil_age: #this is a trick to check for NAN
+                    oil_sum += oil_age
+                    count_sum += 1
+            except Exception:
+                pass # do nothing on entry rows with missing parameters.
+        result['gültige Motoren'].append(count_sum)
+        result['Kumulierte Öl Stunden'].append(int(f"{oil_sum:0.0f}"))
+        result['Mittlere Öl Stunden pro gültigem Motor'].append(int(f"{oil_sum / count_sum:0.0f}"))
+    result[' '] = ['']*len(columns)
+    result['Datum'] = [pd.Timestamp.now()] + ['']* (len(columns)-1)
+    result['Datei'] = [os.path.basename(filename)]  + ['']* (len(columns)-1)
+    rdf = pd.DataFrame.from_dict(result, columns=columns, orient='index')
+    logging.info(f"Exporting Zusammenfassung to {config.zoutfile}.")
+    rdf.to_excel(config.zoutfile)
+    print(rdf)
+    #os.startfile(config.zoutfile)
+
+def summary2(filename, oil_name):
     result = {
         'Datum': pd.Timestamp.now(),
         'Datei':os.path.basename(filename),
