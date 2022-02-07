@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 import pandas as pd
 import numpy as np
@@ -66,6 +67,9 @@ def load(filename):
     # jetzt Daten als Excel abspeichern und user verständigen.
     logging.info(f"Exporting to {config.outfile}.")
     new_df.to_excel(config.outfile, index=False)
-    print(new_df)
-    #os.startfile(config.outfile)
+    if sys.platform == 'win32':
+        os.startfile(config.outfile)
+    else:
+        print(new_df)
+
 

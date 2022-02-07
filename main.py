@@ -16,9 +16,13 @@ _py = 10
 bh = 2
 bw = 30
 #size_x = 8 * bw + 2 * _px + 50
-size_x = 350
-size_y = elements*bh*_h + 2 * _py
+size_x = 260
+size_y = elements*bh*_h + 2 * _py - 10
 #size_y = 240
+
+path = os.path.dirname(config.oildata_logfile)
+if not os.path.exists(path):
+    os.makedirs(path)
 
 logging.basicConfig(filename=config.oildata_logfile, level=logging.DEBUG)
 logging.info('oildataCSV started.')
@@ -40,6 +44,7 @@ try:
             showinfo(title='Error',message=str(e))
             raise
     open_button = tk.Button(root, text='CSV File einlesen', command=select_file, height=bh, width=bw)
+    #open_button.pack(side = tk.TOP, padx = _px, pady = _py)
     open_button.pack(side = tk.TOP, padx = _px, pady = _py)
     #*************************************
 
