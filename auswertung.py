@@ -64,7 +64,7 @@ def summary(filename):
     result[' '] = ['']*len(columns)
     result['Datum'] = [pd.Timestamp.now()] + ['']* (len(columns)-1)
     result['Datei'] = [os.path.basename(filename)]  + ['']* (len(columns)-1)
-    result['Alle Zeilen'] = all_lines
+    result['Alle Zeilen'] = [all_lines] + ['']* (len(columns)-1)
     rdf = pd.DataFrame.from_dict(result, columns=columns, orient='index')
     logging.info(f"Exporting Zusammenfassung to {config.zoutfile}.")
     #rdf.to_excel(config.zoutfile)
@@ -84,9 +84,8 @@ def summary(filename):
 
     t2 = time.time()
     print(f"fertig, Dauer Einlesen ...{(t1-t0):0.2f} Dauer Speichern ...{(t2-t1):0.2f} Dauer gesamt ...{(t2-t0):0.2f}")
-    os.startfile(config.zoutfile)
-    if sys.platfrom == 'win32':
-        os.startfile(config.zoutfile)
+    if sys.platform == 'win32':
+        os.startfile(filename)
     else:
         print(rdf)
 

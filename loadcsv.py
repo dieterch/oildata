@@ -67,7 +67,7 @@ def load(filename):
     # jetzt Daten als Excel abspeichern und user verständigen.
     logging.info(f"Exporting to {config.outfile}.")
     new_df.to_excel(config.outfile, index=False)
-    if sys.platfrom == 'win32':
+    if sys.platform == 'win32':
         os.startfile(config.outfile)
     else:
         print(new_df)
