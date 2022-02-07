@@ -20,6 +20,10 @@ size_x = 350
 size_y = elements*bh*_h + 2 * _py
 #size_y = 240
 
+path = os.path.dirname(config.oildata_logfile)
+if not os.path.exists(path):
+    os.makedirs(path)
+
 logging.basicConfig(filename=config.oildata_logfile, level=logging.DEBUG)
 logging.info('oildataCSV started.')
 try:

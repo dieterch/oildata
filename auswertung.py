@@ -3,9 +3,9 @@ from pprint import pprint as pp
 import helpers
 import logging
 import os
+import sys
 import time
 import config
-import datetime
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import load_workbook
 from itertools import islice
@@ -14,18 +14,19 @@ def summary(filename):
     t0 = time.time()
     fields = ['Unique Code','General Description','Oil/Fluid Long Name','Unit Hours','Oil/Fluid Hours'] # auf die benötigten Felder beschränken
 
-    # load data into dataframe with openpyxl
-    wb = load_workbook(filename)
-    wbsheets = wb.sheetnames
-    ws0 = wb[wbsheets[0]]
-    data = ws0.values
-    cols = next(data)[1:]
-    data = list(data)
-    idx = [r[0] for r in data]
-    data = (islice(r, 1, None) for r in data)
-    xdf = pd.DataFrame(data, index=idx, columns=cols)[fields]
+    # # load data into dataframe with openpyxl
+    # wb = load_workbook(filename)
+    # wbsheets = wb.sheetnames
+    # ws0 = wb[wbsheets[0]]
+    # data = ws0.values
+    # cols = next(data)[1:]
+    # data = list(data)
+    # idx = [r[0] for r in data]
+    # data = (islice(r, 1, None) for r in data)
+    # xdf = pd.DataFrame(data, index=idx, columns=cols)[fields]
 
-    #xdf = pd.read_excel(filename)[fields]
+    xdf = pd.read_excel(filename)[fields]
+    all_lines = xdf.shape[0]
 
     corr_xdf = xdf.applymap(helpers.corr) # correct the contents
     
@@ -63,6 +64,7 @@ def summary(filename):
     result[' '] = ['']*len(columns)
     result['Datum'] = [pd.Timestamp.now()] + ['']* (len(columns)-1)
     result['Datei'] = [os.path.basename(filename)]  + ['']* (len(columns)-1)
+    result['Alle Zeilen'] = all_lines
     rdf = pd.DataFrame.from_dict(result, columns=columns, orient='index')
     logging.info(f"Exporting Zusammenfassung to {config.zoutfile}.")
     #rdf.to_excel(config.zoutfile)
@@ -82,77 +84,48 @@ def summary(filename):
 
     t2 = time.time()
     print(f"fertig, Dauer Einlesen ...{(t1-t0):0.2f} Dauer Speichern ...{(t2-t1):0.2f} Dauer gesamt ...{(t2-t0):0.2f}")
-    #os.startfile(config.zoutfile)
+    os.startfile(config.zoutfile)
+    if sys.platfrom == 'win32':
+        os.startfile(config.zoutfile)
+    else:
+        print(rdf)
 
-def summary2(filename, oil_name):
-    result = {
-        'Datum': pd.Timestamp.now(),
-        'Datei':os.path.basename(filename),
-        'Öl':oil_name,
-        }
-    fields = ['Unique Code','General Description','Oil/Fluid Long Name','Unit Hours','Oil/Fluid Hours'] # auf die benötigten Felder beschränken
-    xdf = pd.read_excel(filename)[fields]
-    new_xdf = xdf.applymap(helpers.corr) # correct the contents
-    new_xdf = new_xdf[new_xdf['Oil/Fluid Long Name'] == oil_name] # nur die Zeilen mit 'oil_name' ausfiltern
-    uniquecodes = new_xdf['Unique Code'].unique() # Alle Unique Codes der Motoren auslesen - nur unterschiedliche codes kommen in die Liste
-    No_of_Engines = len(uniquecodes)
-    result.update({
-        'Zeilen': new_xdf.shape[0],
-        'Eindeutige Motoren': No_of_Engines
-    })
-    if new_xdf.shape[0] == 0: #no enties found
-        raise ValueError(f"kein Öl mit Namen '{oil_name}' in '{os.path.basename(filename)}' gefunden.")
-    oil_sum = 0
-    count_sum = 0
-    for u in uniquecodes:
-        df = new_xdf[new_xdf['Unique Code'] == u].sort_values(by = ['Unit Hours'],ascending=[True])
-        try: #try to calculate oil running hours
-            oil_age = df['Unit Hours'].max() - df['Unit Hours'].min() + df.iloc[0]['Oil/Fluid Hours']
-            if oil_age == oil_age: #this is a trick to check for NAN
-                oil_sum += oil_age
-                count_sum += 1
-        except Exception:
-            pass # do nothing on entry rows with missing parameters.
-    result.update({
-        'gültige Motoren': count_sum,
-        'Kumulierte Öl Stunden': int(f"{oil_sum:0.0f}"),
-        'Mittlere Öl Stunden pro gültigem Motor': int(f"{oil_sum / (count_sum or 1):0.0f}")
-    })
-    rdf = pd.DataFrame.from_dict(result, orient='index')
-    logging.info(f"Exporting Zusammenfassung to {config.zoutfile}.")
-    rdf.to_excel(config.zoutfile, header=False)
-    print(rdf)
-    #os.startfile(config.zoutfile)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    logging.info(f"Counting unique 'Unique Code' in: {filename}")
-    xl_file = filename.split('/')[-1]
-    xdf = pd.read_excel(filename)
-    ne = xdf['Unique Code'].nunique()
-    logging.info(f"Number of unique 'Unique Code' in {filename}: {ne}")
-    
-    
-    
-    
-    
-    
-    return f"Number of unique 'Unique Code' fields: {ne}"
+# def summary2(filename, oil_name):
+#     result = {
+#         'Datum': pd.Timestamp.now(),
+#         'Datei':os.path.basename(filename),
+#         'Öl':oil_name,
+#         }
+#     fields = ['Unique Code','General Description','Oil/Fluid Long Name','Unit Hours','Oil/Fluid Hours'] # auf die benötigten Felder beschränken
+#     xdf = pd.read_excel(filename)[fields]
+#     new_xdf = xdf.applymap(helpers.corr) # correct the contents
+#     new_xdf = new_xdf[new_xdf['Oil/Fluid Long Name'] == oil_name] # nur die Zeilen mit 'oil_name' ausfiltern
+#     uniquecodes = new_xdf['Unique Code'].unique() # Alle Unique Codes der Motoren auslesen - nur unterschiedliche codes kommen in die Liste
+#     No_of_Engines = len(uniquecodes)
+#     result.update({
+#         'Zeilen': new_xdf.shape[0],
+#         'Eindeutige Motoren': No_of_Engines
+#     })
+#     if new_xdf.shape[0] == 0: #no enties found
+#         raise ValueError(f"kein Öl mit Namen '{oil_name}' in '{os.path.basename(filename)}' gefunden.")
+#     oil_sum = 0
+#     count_sum = 0
+#     for u in uniquecodes:
+#         df = new_xdf[new_xdf['Unique Code'] == u].sort_values(by = ['Unit Hours'],ascending=[True])
+#         try: #try to calculate oil running hours
+#             oil_age = df['Unit Hours'].max() - df['Unit Hours'].min() + df.iloc[0]['Oil/Fluid Hours']
+#             if oil_age == oil_age: #this is a trick to check for NAN
+#                 oil_sum += oil_age
+#                 count_sum += 1
+#         except Exception:
+#             pass # do nothing on entry rows with missing parameters.
+#     result.update({
+#         'gültige Motoren': count_sum,
+#         'Kumulierte Öl Stunden': int(f"{oil_sum:0.0f}"),
+#         'Mittlere Öl Stunden pro gültigem Motor': int(f"{oil_sum / (count_sum or 1):0.0f}")
+#     })
+#     rdf = pd.DataFrame.from_dict(result, orient='index')
+#     logging.info(f"Exporting Zusammenfassung to {config.zoutfile}.")
+#     rdf.to_excel(config.zoutfile, header=False)
+#     print(rdf)
+#     #os.startfile(config.zoutfile)
