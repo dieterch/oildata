@@ -24,7 +24,7 @@ try:
     #   It only sets the appropriate prefix PATH entries - it does not actually activate environments
 
 
-    from menuinst.knownfolders import FOLDERID, get_folder_path, PathNotFoundException
+    #from menuinst.knownfolders import FOLDERID, get_folder_path, PathNotFoundException
 
     # call as: python cwp.py PREFIX ARGs...
 
@@ -40,11 +40,11 @@ try:
     env['PATH'] = new_paths + pathsep + env['PATH']
     env['CONDA_PREFIX'] = prefix
 
-    documents_folder, exception = get_folder_path(FOLDERID.Documents)
-    if exception:
-        documents_folder, exception = get_folder_path(FOLDERID.PublicDocuments)
-    if not exception:
-        os.chdir(documents_folder)
+    # documents_folder, exception = get_folder_path(FOLDERID.Documents)
+    # if exception:
+    #     documents_folder, exception = get_folder_path(FOLDERID.PublicDocuments)
+    # if not exception:
+    #     os.chdir(documents_folder)
 
     logging.info(f"Wrapper.py called.")
     logging.debug(f"Current Dir: {os.getcwd()}")
